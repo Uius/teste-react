@@ -1,75 +1,104 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'
 
 type Tarefa = {
-  id: number;
-  texto: string;
-};
+  id: number
+  texto: string
+  created_at: string
+}
 
 export default function Home() {
-  const [tarefas, setTarefas] = useState<Tarefa[]>([]);
-  const [novaTarefa, setNovaTarefa] = useState('');
+  const [tarefas, setTarefas] = useState<Tarefa[]>([])
+  const [texto, setTexto] = useState('')
+  const [erro, setErro] = useState('')
 
   async function carregarTarefas() {
-    const res = await fetch('/api/tarefas');
-    const dados = await res.json();
-    setTarefas(dados);
+  try {
+    const res = await fetch('/api/tarefas')
+    const data = await res.json()
+
+    if (!Array.isArray(data)) {
+      setErro(data.erro || 'Erro inesperado')
+      setTarefas([]) // evita erro de map()
+      return
+    }
+
+    setTarefas(data)
+  } catch (err) {
+    console.error('Erro ao carregar tarefas:', err)
+    setErro('Erro ao carregar tarefas')
+    setTarefas([])
   }
+}
 
-  async function adicionarTarefa() {
-    if (!novaTarefa.trim()) return;
+  async function adicionarTarefa(e: React.FormEvent) {
+    e.preventDefault()
+    setErro('')
 
-    const res = await fetch('/api/tarefas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texto: novaTarefa }),
-    });
+    if (!texto.trim()) return
 
-    if (res.ok) {
-      setNovaTarefa('');
-      carregarTarefas();
+    try {
+      const res = await fetch('/api/tarefas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texto }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setErro(data.erro || 'Erro ao criar tarefa')
+        return
+      }
+
+      setTexto('')
+      carregarTarefas()
+    } catch (err) {
+      console.error(err)
+      setErro('Erro ao criar tarefa')
     }
   }
 
   useEffect(() => {
-    carregarTarefas();
-  }, []);
+    carregarTarefas()
+  }, [])
 
   return (
-    <main className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-xl">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-          📋 Lista de Tarefas
-        </h1>
+    <div className="max-w-xl mx-auto mt-10 px-4">
+      <h1 className="text-2xl font-bold mb-4">Lista de Tarefas</h1>
 
-        <div className="flex gap-2 mb-6">
-          <input
-            type="text"
-            value={novaTarefa}
-            onChange={(e) => setNovaTarefa(e.target.value)}
-            placeholder="Digite uma tarefa..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-blue-800"
-          />
-          <button
-            onClick={adicionarTarefa}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+      <form onSubmit={adicionarTarefa} className="mb-4 flex gap-2">
+        <input
+          type="text"
+          placeholder="Digite uma nova tarefa"
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          className="flex-1 p-2 rounded bg-zinc-800 text-white border border-zinc-600"
+        />
+        <button
+          type="submit"
+          className="bg-green-600 px-4 py-2 rounded text-white hover:bg-green-700"
+        >
+          Adicionar
+        </button>
+      </form>
+
+      {erro && <p className="text-red-400 mb-4">{erro}</p>}
+
+      <ul className="space-y-2">
+        {tarefas.map((tarefa) => (
+          <li
+            key={tarefa.id}
+            className="p-3 rounded bg-zinc-800 border border-zinc-700 text-white"
           >
-            Adicionar
-          </button>
-        </div>
-
-        <ul className="space-y-3">
-          {tarefas.map((tarefa) => (
-            <li
-              key={tarefa.id}
-              className="bg-gray-50 border border-gray-200 rounded-lg p-3 shadow-sm text-gray-700"
-            >
-              {tarefa.texto}
-            </li>
-          ))}
-        </ul>
-      </div>
-    </main>
-  );
+            {tarefa.texto}
+            <span className="block text-sm text-zinc-400">
+              {new Date(tarefa.created_at).toLocaleString('pt-BR')}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }

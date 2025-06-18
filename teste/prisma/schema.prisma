@@ -6,10 +6,17 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("postgresql://postgres.smpgjegodrhorawwelpf:W!ll18092023@@aws-0-sa-east-1.pooler.supabase.com:6543/postgres")
+  url      = env("DATABASE_URL")
+}
+
+model Tarefa {
+  id         Int      @id @default(autoincrement())
+  texto      String
+  created_at DateTime @default(now())
+
+  @@map("tarefas")
 }
